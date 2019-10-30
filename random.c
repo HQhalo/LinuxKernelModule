@@ -71,23 +71,3 @@ static ssize_t hello_read(struct file *filp, char *buffer, size_t length, loff_t
 module_init(hello_init);
 
 module_exit(hello_exit);
----------------------------------------------
-Kbuild:
-#cd /root/Test
-#vim Kbuild
-
-EXTRA_CFLAGS = -Wall
-
-obj-m = hello.o
-------------------------------------------\
-Makefile:
-#cd /root/Test/
-#vim Makefile
-
-KDIR = /lib/modules/`uname -r`/build
-
-all:
-	make -C $(KDIR) M=`pwd`
-clean:
-	make -C $(KDIR) M=`pwd` clean
-     
