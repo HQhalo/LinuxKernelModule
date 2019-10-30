@@ -1,73 +1,64 @@
-#include<linux/kernel.h>
-
-#include<linux/init.h>
-
-#include<linux/module.h>
-
-#include<linux/fs.h>
-
-static ssize_t hello_read(struct file *filp, char *buffer, size_t length, loff_t *offset);
-
-static int Major;
-
-//Cấu trúc để đăng ký các hàm qua driver interface được được qui định theo chuẩn
-
-static struct file_operations fops={
-
-     .owner=THIS_MODULE,
-
-     .read=hello_read,   
-
+#include <linux/module.h>
+#include <linux/version.h>
+#include <linux/kernel.h>
+#include <linux/types.h>
+#include <linux/kdev_t.h>
+#include <linux/fs.h>
+#include <linux/device.h>
+#include <linux/cdev.h>
+#include<linux/random.h>
+static dev_t first; // Global variable for the first device number
+static struct cdev c_dev; // Global variable for the character device structure
+static struct class *cl; // Global variable for the device class
+static struct file_operations pugs_fops =
+{
+    .owner = THIS_MODULE,
+    .read = random_read,
+    
 };
-
-static int hello_init(void)
-
+static ssize_t random_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
-
-    //Đăng ký thiết bị kiểu character với major id hệ thống cung cấp
-
-     Major=register_chrdev(0,"KTMT-Device",&fops);   
-
-     if(Major<0)
-
-     {
-
-           printk(KERN_ALERT "Dang ky that bai\n");
-
-     }
-
-     else{
-
-           printk(KERN_ALERT "Dang ky thiet bi thanh cong voi MajorID=%d\n",Major);
-
-     }
-
-return 0;
-
+    int i;
+    get_random_bytes(&i,sizeof(i));
+    return i;
+}
+static int __init random_init(void) /* Constructor */
+{
+    if (alloc_chrdev_region(&first, 0, 1, "myRamdom") < 0)
+    {
+        return -1;
+    }
+    if ((cl = class_create(THIS_MODULE, "chardrv")) == NULL)
+    {
+        unregister_chrdev_region(first, 1);
+        return -1;
+    }
+    if (device_create(cl, NULL, first, NULL, "randomDevice") == NULL)
+    {
+        class_destroy(cl);
+        unregister_chrdev_region(first, 1);
+        return -1;
+    }
+    cdev_init(&c_dev, &pugs_fops);
+    if (cdev_add(&c_dev, first, 1) == -1)
+    {
+        device_destroy(cl, first);
+        class_destroy(cl);
+        unregister_chrdev_region(first, 1);
+        return -1;
+    }
+    return 0;
 }
 
-static void hello_exit(void)
-
+static void __exit random_exit(void) /* Destructor */
 {
-
-    //Giải phóng thiết bị đã đăng ký
-
-     unregister_chrdev(Major,"KTMT-Device");       
-
-     printk(KERN_ALERT "Thiet bi da bi ngat khoi he thong\n");
-
+    cdev_del(&c_dev);
+    device_destroy(cl, first);
+    class_destroy(cl);
+    unregister_chrdev_region(first, 1);
+    
 }
 
-//Hàm read được cung cấp qua driver interface
-
-static ssize_t hello_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
-
-{
-
-     return 100; //Hảm read của driver chỉ đơn giản trả về một giá trị
-
-}
-
-module_init(hello_init);
-
-module_exit(hello_exit);
+module_init(random_init);
+module_exit(random_exit);
+MODULE_LICENSE("GPL");
