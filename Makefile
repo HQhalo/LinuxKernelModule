@@ -1,4 +1,3 @@
-#cd /root/Test/
 #vim Makefile
 
 KDIR = /lib/modules/`uname -r`/build
