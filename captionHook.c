@@ -25,40 +25,26 @@ asmlinkage int captain_hook(char* play_here) {
  printk(KERN_INFO "Pname Syscall:HOOK! HOOK! HOOK! HOOK!...ROOOFFIIOO!");
  return custom_syscall(play_here);
 }
-/*Make page writeable*/
-int make_rw(unsigned long address){
- unsigned int level;
- pte_t *pte = lookup_address(address, &level);
- if(pte->pte &~_PAGE_RW){
- pte->pte |=_PAGE_RW;
- }
- return 0;
-}
-/* Make the page write protected */
-int make_ro(unsigned long address){
- unsigned int level;
- pte_t *pte = lookup_address(address, &level);
- pte->pte = pte->pte &~_PAGE_RW;
- return 0;
-}
+
 static int __init entry_point(void){
+ write_cr0 (read_cr0 () & (~ 0x10000));
  printk(KERN_INFO "Captain Hook loaded successfully..\n");
  /*MY sys_call_table address*/
  system_call_table_addr = (void*)0xffffffff81601680;
  /* Replace custom syscall with the correct system call name (write,open,etc) to hook*/
  custom_syscall = system_call_table_addr[__NR_pname];
- /*Disable page protection*/
- make_rw((unsigned long)system_call_table_addr);
- /*Change syscall to our syscall function*/
+ 
  system_call_table_addr[__NR_pname] = captain_hook;
+ write_cr0 (read_cr0 () | 0x10000);
  return 0;
 }
 static int __exit exit_point(void){
+ write_cr0 (read_cr0 () & (~ 0x10000));
  printk(KERN_INFO "Unloaded Captain Hook successfully\n");
  /*Restore original system call */
  system_call_table_addr[__NR_pname] = custom_syscall;
- /*Renable page protection*/
- make_ro((unsigned long)system_call_table_addr);
+ 
+ write_cr0 (read_cr0 () | 0x10000);
  return 0;
 }
 module_init(entry_point);
