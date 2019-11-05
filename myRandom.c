@@ -7,6 +7,7 @@
 #include <linux/device.h>
 #include <linux/cdev.h>
 #include<linux/random.h>
+#include <linux/uaccess.h>
 
 #define DEVICE_NAME "DeviceQT"
 #define CLASS_NAME "ClassQT"
@@ -19,13 +20,15 @@ static dev_t first;
 static struct cdev DeviceQT;
 static struct class *classQT; 
 
-static ssize_t random_read(struct file *f, char __user *buf, size_t len, loff_t *off);
+ssize_t random_read (struct file *f , char __user *buf, size_t len, loff_t *off); 
 
-static ssize_t random_read(struct file *f, char __user *buf, size_t len, loff_t *off)
+ssize_t random_read (struct file *f , char __user *buf, size_t len, loff_t *off)
 {
-    
-    get_random_bytes(buf,sizeof(char)*len);
-    return len;
+    char temp[4]={"0000"}; 
+    get_random_bytes(temp,sizeof(char)*len);
+    copy_to_user(buf,temp,4);
+    len =4;
+    return 4;
 }
 
 static struct file_operations pugs_fops =
