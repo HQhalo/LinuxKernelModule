@@ -23,9 +23,9 @@ static ssize_t random_read(struct file *f, char __user *buf, size_t len, loff_t 
 
 static ssize_t random_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
-    int i;
-    get_random_bytes(&i,sizeof(i));
-    return i;
+    
+    get_random_bytes(buf,sizeof(char)*len);
+    return len;
 }
 
 static struct file_operations pugs_fops =
