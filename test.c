@@ -28,7 +28,7 @@ int main(int argc, char** argv){
           return errno;
      }
      
-     int i;
+     int i =0;
      read(fd,&i,sizeof(i));
 
      printf("Random value: %d\n",i);
