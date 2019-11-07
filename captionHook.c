@@ -16,37 +16,64 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("D0hnuts");
 
 void **system_call_table_addr;
+asmlinkage int (*real_open)(const char* __user, int, int);
+ 
+asmlinkage int custom_open(const char* __user file_name, int flags, int mode)
+{
+    //if(strcmp(current->comm , "test")==0){
+    
+    printk("hooked: Thread: %s ,open(\"%s\", %X, %X)\n", current->comm,file_name,
+                                                    flags,
+                                                    mode);
+    //}
+  return real_open(file_name, flags, mode);
+}  
 
+asmlinkage int (*real_write) (int dirfd, const char *pathname, int flags, mode_t mode);
 
-asmlinkage int (*custom_syscall) (const char __user *pathname);
+asmlinkage int my_sys_open(int dirfd, const char *pathname, int flags, mode_t mode) {
+   
 
-
-asmlinkage int my_sys_open( const char __user *pathname) {
     if(strcmp(current->comm , "test")==0){
-        char path[100];
-        copy_from_user(path,pathname,strnlen_user(pathname,100));
-        printk(KERN_INFO "HOOK!");
-        printk("THREAD NAME = %s  FILE = %s \n\n", current->comm,pathname);
+       // struct filename  *tmp = getname_flags(pathname,0,NULL);
+       
+        printk(KERN_INFO "HOOK!\n");
+       // printk(KERN_INFO "THREAD NAME = %s  FILE = %s \n\n", current->comm,tmp->name);
 
     }
-    return  custom_syscall(pathname);
+    
+    return  (*custom_syscall)(dirfd,pathname,flags,mode);
+}
+asmlinkage int (*custom_syscall) (int dirfd, const char *pathname, int flags, mode_t mode);
 
+asmlinkage int my_sys_open(int dirfd, const char *pathname, int flags, mode_t mode) {
+   
+
+    if(strcmp(current->comm , "test")==0){
+       // struct filename  *tmp = getname_flags(pathname,0,NULL);
+       
+        printk(KERN_INFO "HOOK!\n");
+       // printk(KERN_INFO "THREAD NAME = %s  FILE = %s \n\n", current->comm,tmp->name);
+
+    }
+    
+    return  (*custom_syscall)(dirfd,pathname,flags,mode);
 }
 
 static int __init entry_point(void){
     write_cr0 (read_cr0 () & (~ 0x10000));
     printk(KERN_INFO "Captain Hook loaded successfully..\n");
     system_call_table_addr = (void*)0xffffffff82000280;
-    custom_syscall = system_call_table_addr[__NR_openat];
+    real_open = system_call_table_addr[__NR_openat];
     
-    system_call_table_addr[__NR_openat] = my_sys_open;
+    system_call_table_addr[__NR_openat] = custom_open;
     write_cr0 (read_cr0 () | 0x10000);
     return 0;
 }
 static void __exit exit_point(void){
  write_cr0 (read_cr0 () & (~ 0x10000));
  printk(KERN_INFO "Unloaded Captain Hook successfully\n");
- system_call_table_addr[__NR_openat] = custom_syscall;
+ system_call_table_addr[__NR_openat] = real_open;
  
  write_cr0 (read_cr0 () | 0x10000);
 
