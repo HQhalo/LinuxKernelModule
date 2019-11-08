@@ -1,4 +1,4 @@
-obj-m += captainHook.o
+obj-m += myRandom.o
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 clean:
